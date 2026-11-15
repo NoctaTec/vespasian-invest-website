@@ -388,6 +388,8 @@ footer summary::-webkit-details-marker{display:none}footer summary::after{conten
         <p>Diese Website setzt keine Cookies und verwendet keine Werbedienste. Schriften und Bilder werden nicht von fremden Servern geladen.</p>
         <h3>Reichweitenmessung</h3>
         <p>Um zu verstehen, wie unsere Website genutzt wird, verwenden wir Cloudflare Web Analytics. Dabei werden keine Cookies gesetzt, keine Daten im Browser gespeichert und keine Nutzerprofile gebildet. Erfasst werden nur zusammengefasste Angaben wie aufgerufene Seiten, Herkunftsseite, Land, Gerätetyp und Ladezeiten. Rechtsgrundlage ist unser berechtigtes Interesse an einer bedarfsgerechten Gestaltung der Website (Art. 6 Abs. 1 lit. f DSGVO).</p>
+        <h3>Klick- und Lesestatistik</h3>
+        <p>Zusätzlich zählen wir ohne Cookies, wie oft Schaltflächen und Links auf dieser Website genutzt werden und wie lange und wie weit Seiten gelesen werden. Gespeichert werden nur Tagessummen je Seite, keine IP-Adressen, keine Gerätekennungen und keine Nutzerprofile. Die Verarbeitung läuft über Cloudflare Workers (Cloudflare, Inc., USA). Rechtsgrundlage ist unser berechtigtes Interesse an einer bedarfsgerechten Gestaltung der Website (Art. 6 Abs. 1 lit. f DSGVO). Sendet Ihr Browser „Do Not Track“, wird nichts gezählt.</p>
         <h3>Anfrageformular und Kontakt</h3>
         <p>Das Anfrageformular speichert und überträgt keine Daten, es öffnet nur Ihr eigenes E-Mail-Programm. Wenn Sie uns per E-Mail oder Telefon kontaktieren, verarbeiten wir Ihre Angaben, um Ihre Anfrage zu bearbeiten (Art. 6 Abs. 1 lit. b bzw. f DSGVO). Wir löschen sie, sobald sie nicht mehr erforderlich sind und keine gesetzlichen Aufbewahrungspflichten bestehen. E-Mails an uns liegen bei unserem E-Mail-Anbieter Purelymail (USA), dort sind unsere Postfächer gespeichert.</p>
         <h3>Vertraulichkeit</h3>
@@ -452,5 +454,34 @@ footer summary::-webkit-details-marker{display:none}footer summary::after{conten
 })();
 </script>
 <!-- Cloudflare Web Analytics: Snippet hier einfügen, sobald die Seite live ist. -->
+<!-- Zähler ohne Cookies: nur Tagessummen je Seite, siehe Datenschutz -->
+<script>
+(function(){
+  if (!navigator.sendBeacon || navigator.doNotTrack === '1' || window.doNotTrack === '1') return;
+  var E = '/z/e', p = location.pathname, vis = 0, seit = document.visibilityState === 'visible' ? Date.now() : 0, tief = 0, fertig = false, schon = {};
+  function senden(o) { o.p = p; try { navigator.sendBeacon(E, JSON.stringify(o)); } catch (e) {} }
+  function tiefe() { var h = document.documentElement, m = h.scrollHeight - h.clientHeight, y = window.pageYOffset || h.scrollTop || 0; var v = m > 0 ? Math.round((y + 1) / m * 100) : 100; if (v > tief) tief = v; }
+  function zeit() { if (seit) { vis += Date.now() - seit; seit = 0; } }
+  function ende() { zeit(); if (fertig) return; fertig = true; tiefe(); senden({ k: 'v', t: vis / 1000, s: tief, m: window.matchMedia('(max-width: 700px)').matches ? 1 : 0 }); }
+  function ereignis(art, text) { var k = art + '|' + text; if (schon[k]) return; schon[k] = 1; senden({ k: 'e', e: art, l: String(text || '').replace(/\s+/g, ' ').trim().slice(0, 60) }); }
+  window.addEventListener('scroll', tiefe, { passive: true });
+  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'hidden') ende(); else if (!seit) seit = Date.now(); });
+  window.addEventListener('pagehide', ende);
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest && e.target.closest('a, button, summary, [data-z]'); if (!a) return;
+    var h = a.getAttribute('href') || '', t = a.getAttribute('data-z') || a.getAttribute('aria-label') || a.textContent || '';
+    if (a.tagName === 'SUMMARY') return ereignis('Aufgeklappt', t);
+    if (/^mailto:/i.test(h) || /email-protection/.test(h)) return ereignis('E-Mail', t);
+    if (/^tel:/i.test(h)) return ereignis('Telefon', t);
+    if (/wa\.me|whatsapp/i.test(h)) return ereignis('WhatsApp', t);
+    if (/cal\.(eu|com)/i.test(h)) return ereignis('Termin', t);
+    if (/^https?:/i.test(h) && a.hostname && a.hostname.replace(/^www\./, '') !== location.hostname.replace(/^www\./, '')) return ereignis('Externer Link', a.hostname.replace(/^www\./, ''));
+    if (a.tagName === 'BUTTON' || /\bbtn\b/.test(a.className) || a.hasAttribute('data-z')) return ereignis('Schaltfläche', t);
+  }, true);
+  document.addEventListener('submit', function (e) { ereignis('Formular', e.target.getAttribute('aria-label') || e.target.id || 'Formular'); }, true);
+  Array.prototype.forEach.call(document.querySelectorAll('video'), function (v) { v.addEventListener('play', function () { ereignis('Video', v.id || 'Video'); }, { once: true }); });
+  var r = document.getElementById('rechner'); if (r) r.addEventListener('input', function () { ereignis('Rechner', 'Werte geändert'); }, { once: true });
+})();
+</script>
 </body>
 </html>
